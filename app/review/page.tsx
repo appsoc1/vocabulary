@@ -127,20 +127,26 @@ function ReviewContent() {
     );
   }
 
+  // FIXED FOOTER STRATEGY:
+  // 1. Outer container uses min-h-dvh to fill screen but allow growth.
+  // 2. Content has large bottom padding to clear the fixed footer.
+  // 3. Footer is fixed bottom-0 to stay stuck to the keyboard/viewport bottom.
+
   return (
-    <div className="flex flex-col h-[100dvh] bg-background">
-      {/* Main content - add min-h-0 to allow scrolling */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
-        <div className="max-w-2xl mx-auto space-y-4 h-full flex flex-col">
+    <div className="min-h-[100dvh] bg-background relative flex flex-col">
+      {/* Main content - Scrollable area */}
+      <div className="flex-1 w-full px-4 pb-48 pt-6">
+        <div className="max-w-2xl mx-auto space-y-6 flex flex-col items-center">
+
           {/* Card display */}
-          <div className="bg-card border rounded-2xl p-6 text-center shadow-sm flex-1 min-h-[200px] flex flex-col items-center justify-center">
+          <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center relative z-10">
             {!revealed ? (
-              <div className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground break-all">
+              <div className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground break-all leading-tight">
                 {maskedWord}
               </div>
             ) : (
               <div className="space-y-4 animate-in fade-in duration-200 w-full overflow-hidden">
-                <div className={`text-4xl md:text-6xl font-bold break-words ${checkResult === "correct" ? "text-green-600" : "text-primary"}`}>
+                <div className={`text-4xl md:text-6xl font-bold break-words leading-tight ${checkResult === "correct" ? "text-green-600" : "text-primary"}`}>
                   {currentCard.english}
                 </div>
                 <div className="w-20 h-1 bg-muted mx-auto rounded" />
@@ -161,8 +167,10 @@ function ReviewContent() {
             )}
           </div>
 
-          {/* Buttons area */}
-          <div className="pb-2">
+          {/* Buttons Area - Placed directly in flow. 
+              On huge screens it sits below card. On mobile it scrolls with card.
+          */}
+          <div className="w-full max-w-2xl z-10">
             {!revealed ? (
               <div className="flex gap-3">
                 <button
@@ -193,8 +201,8 @@ function ReviewContent() {
         </div>
       </div>
 
-      {/* Fixed bottom input */}
-      <div className="w-full bg-background border-t px-4 py-3 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+      {/* Fixed bottom input - Properly fixed to viewport bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-3 z-50 pb-[max(12px,env(safe-area-inset-bottom))]">
         <div className="max-w-2xl mx-auto">
           <div className="relative flex items-end bg-muted/50 rounded-2xl border shadow-sm">
             <textarea
@@ -210,7 +218,7 @@ function ReviewContent() {
             <button
               onClick={handleCheck}
               disabled={!userInput.trim() || revealed}
-              className="h-10 w-10 mr-2 mb-1.5 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-10 w-10 mr-2 mb-1.5 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               <Send size={18} />
             </button>
