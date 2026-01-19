@@ -51,9 +51,6 @@ function ReviewContent() {
   const [revealed, setRevealed] = useState(false);
   const [checkResult, setCheckResult] = useState<"correct" | "wrong" | null>(null);
 
-  // FOCUS STATE: Used to hide buttons on mobile when typing to save space
-  const [isFocused, setIsFocused] = useState(false);
-
   const maskedWord = useMemo(() => {
     return currentCard ? maskWord(currentCard.english) : "";
   }, [currentCard?.english]);
@@ -121,28 +118,28 @@ function ReviewContent() {
     );
   }
 
-  // FIXED SHELL LAYOUT V7 - COMPACT FOCUS MODE
+  // FIXED SHELL LAYOUT V8 - COMPACT MODE (Always Visible Buttons)
   return (
     <div className="fixed inset-0 w-full h-full bg-background overflow-hidden overscroll-none">
       {/* 
-        1. Scrollable Content Container
+        Scrollable Content Container
       */}
       <div className="w-full h-full overflow-y-auto px-4 pt-4 pb-[140px] flex flex-col items-center">
-        <div className="max-w-2xl w-full space-y-6 flex flex-col items-center">
+        <div className="max-w-2xl w-full space-y-4 flex flex-col items-center">
 
           {/* Progress Indicator */}
-          <div className="w-full text-xs text-muted-foreground text-center mb-1 opacity-50">
+          <div className="w-full text-xs text-muted-foreground text-center opacity-50">
             {currentCard.id.slice(0, 4)}...
           </div>
 
-          {/* Card display */}
-          <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[200px] flex flex-col items-center justify-center relative z-10">
+          {/* Card display - REDUCED HEIGHT for mobile keyboard compatibility */}
+          <div className="w-full bg-card border rounded-2xl p-4 text-center shadow-sm min-h-[150px] flex flex-col items-center justify-center relative z-10">
             {!revealed ? (
               <div className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground break-all leading-tight">
                 {maskedWord}
               </div>
             ) : (
-              <div className="space-y-4 animate-in fade-in duration-200 w-full overflow-hidden">
+              <div className="space-y-3 animate-in fade-in duration-200 w-full overflow-hidden">
                 <div className={`text-4xl md:text-6xl font-bold break-words leading-tight ${checkResult === "correct" ? "text-green-600" : "text-primary"}`}>
                   {currentCard.english}
                 </div>
@@ -164,16 +161,14 @@ function ReviewContent() {
             )}
           </div>
 
-          {/* Buttons Area - HIDDEN ON MOBILE KEYBOARD */}
-          {/* We hide this block when 'isFocused' is true to save screen space */}
-          <div className={`w-full max-w-2xl z-10 transition-all duration-300 ${isFocused ? 'hidden md:block opacity-0 md:opacity-100 h-0 md:h-auto' : 'opacity-100 h-auto'}`}>
+          {/* Buttons Area - ALWAYS VISIBLE */}
+          <div className="w-full max-w-2xl z-10 transition-all duration-300">
             {!revealed ? (
               <div className="flex gap-3">
                 <button
                   onClick={handleForget}
                   className="flex-1 h-12 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()} // Prevent stealing focus
                 >
                   <X size={18} />
                   Forget
@@ -182,7 +177,6 @@ function ReviewContent() {
                   onClick={handleRemember}
                   className="flex-1 h-12 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
                 >
                   <Check size={18} />
                   Remember
@@ -193,7 +187,6 @@ function ReviewContent() {
                 onClick={checkResult === "correct" ? handleRemember : handleForget}
                 className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
               >
                 Next
                 <ArrowRight size={18} />
@@ -204,7 +197,7 @@ function ReviewContent() {
       </div>
 
       {/* 
-        2. Fixed Input Area 
+        Fixed Input Area 
       */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <div className="max-w-2xl mx-auto">
@@ -213,8 +206,6 @@ function ReviewContent() {
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setTimeout(() => setIsFocused(false), 100)} // Small delay to allow button clicks if needed
               disabled={revealed}
               rows={1}
               autoFocus
@@ -226,7 +217,6 @@ function ReviewContent() {
               disabled={!userInput.trim() || revealed}
               type="button"
               className="h-10 w-10 mr-2 mb-1.5 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              onMouseDown={(e) => e.preventDefault()}
             >
               <Send size={18} />
             </button>
