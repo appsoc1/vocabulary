@@ -1,9 +1,7 @@
 "use client";
 
-
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-// import { useCards } from "@/hooks/useCards"; 
 import { useReview } from "@/hooks/useReview";
 import { maskWord } from "@/lib/srs/masking";
 import type { Card } from "@/types";
@@ -21,13 +19,41 @@ export default function ReviewPage() {
 function ReviewContent() {
   const sp = useSearchParams();
   const folderStr = sp.get("folders") ?? "";
-
-  // No longer needed to memoize folderIds for useCards, but useful for effect dependency
   const folderIds = folderStr;
 
-  // const { listByFolders } = useCards();
   const [cards, setCards] = useState<CardWithProgress[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
+
+  // VIEWPORT HEIGHT LOGIC
+  // Initialize with 100vh as fallback
+  const [viewportHeight, setViewportHeight] = useState("100vh");
+
+  useEffect(() => {
+    // Handler to detect visual viewport changes (keyboard open/close)
+    const handleResize = () => {
+      // Use visualViewport.height if available, otherwise fallback to innerHeight
+      const height = window.visualViewport?.height || window.innerHeight;
+      setViewportHeight(`${height}px`);
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+      window.visualViewport.addEventListener("scroll", handleResize);
+      // Set initial
+      handleResize();
+    } else {
+      window.addEventListener("resize", handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+        window.visualViewport.removeEventListener("scroll", handleResize);
+      } else {
+        window.removeEventListener("resize", handleResize);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -45,10 +71,9 @@ function ReviewContent() {
         setLoadingCards(false);
       }
     })();
-  }, [folderIds]); // Removed listByFolders dependency
+  }, [folderIds]);
 
   const { loading, currentCard, answerForget, answerRemember } = useReview(cards);
-
 
   const [userInput, setUserInput] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -88,7 +113,6 @@ function ReviewContent() {
   };
 
   const handleRemember = async () => {
-    // FIX 2: Auto-advance (Skip "Next")
     await answerRemember();
   };
 
@@ -122,14 +146,21 @@ function ReviewContent() {
     );
   }
 
-  // FIX 1: Flex Column Layout for Mobile Keyboard Stability
-  // h-[100dvh] + overflow-hidden locks variable viewport height.
-  // Input area is a flex item (shrink-0), so it pushes up naturally.
+  // FIXED LAYOUT V3: Visual Viewport + Top Alignment
   return (
-    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
-      {/* Main content - Scrollable area */}
-      <div className="flex-1 w-full px-4 pt-4 overflow-y-auto">
-        <div className="max-w-2xl mx-auto space-y-6 flex flex-col items-center pb-4">
+    <div
+      className="bg-background flex flex-col overflow-hidden fixed inset-0"
+      style={{ height: viewportHeight }}
+    >
+      {/* 
+        Main content:
+        - flex-1: Takes available space
+        - overflow-y-auto: Scrolls if content is too long
+        - justify-start: ALIGNS TO TOP (Prevents jumping)
+        - pt-4: Fixed padding from top
+      */}
+      <div className="flex-1 w-full px-4 pt-4 overflow-y-auto flex flex-col justify-start">
+        <div className="max-w-2xl w-full mx-auto space-y-6 flex flex-col items-center pb-4">
 
           {/* Card display */}
           <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center relative z-10 shrink-0">
@@ -192,8 +223,8 @@ function ReviewContent() {
         </div>
       </div>
 
-      {/* Input Area - Flex Item (Not Fixed) */}
-      <div className="w-full bg-background/95 backdrop-blur border-t px-4 py-3 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+      {/* Input Area: Flex Item at bottom of the explicit viewport height */}
+      <div className="w-full bg-background/95 backdrop-blur border-t px-4 py-3 shrink-0 z-50">
         <div className="max-w-2xl mx-auto">
           <div className="relative flex items-end bg-muted/50 rounded-2xl border shadow-sm">
             <textarea
@@ -209,6 +240,7 @@ function ReviewContent() {
             <button
               onClick={handleCheck}
               disabled={!userInput.trim() || revealed}
+              type="button"
               className="h-10 w-10 mr-2 mb-1.5 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               <Send size={18} />
