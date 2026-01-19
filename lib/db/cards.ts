@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Card, CardType } from "@/types";
+import type { Card, CardType, Progress } from "@/types";
 
 export type CreateCardInput = {
   folder_id: string;
@@ -98,4 +98,30 @@ export async function deleteCard(ownerId: string, cardId: string): Promise<void>
     .eq("owner_id", ownerId);
 
   if (error) throw error;
+}
+
+export type CardWithProgress = Card & { progress: Progress | null };
+
+export async function listCardsWithProgress(ownerId: string, folderIds: string[]): Promise<CardWithProgress[]> {
+  if (folderIds.length === 0) return [];
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("cards")
+    .select("*, progress(*)")
+    .eq("owner_id", ownerId)
+    .in("folder_id", folderIds)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  // Supabase returns progress as an array (relation) or object. 
+  // Since unique(card_id), it might be an array of 1 or null depending on definition.
+  // Actually, usually 1-to-1 relationships are queried as object if defined correctly, or array if not.
+  // We'll map it to enforce our type.
+  return (data as any[]).map(item => ({
+    ...item,
+    progress: Array.isArray(item.progress) ? item.progress[0] || null : item.progress || null
+  }));
 }

@@ -1,19 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+
 import type { Card, Progress } from "@/types";
+import type { CardWithProgress } from "@/lib/db/cards";
 import { buildQueue } from "@/lib/srs/queue";
 import { applyForget, applyRemember } from "@/lib/srs/algorithm";
 
 type ProgressMap = Record<string, Progress | undefined>;
-
-async function fetchProgress(cardIds: string[]) {
-  if (cardIds.length === 0) return [];
-  const qs = `?cardIds=${encodeURIComponent(cardIds.join(","))}`;
-  const res = await fetch(`/api/progress${qs}`);
-  const data = await res.json();
-  return (data.progress ?? []) as Progress[];
-}
 
 async function saveProgress(patch: {
   card_id: string;
@@ -34,45 +28,43 @@ async function saveProgress(patch: {
   return data.progress as Progress;
 }
 
-export function useReview(cards: Card[]) {
+export function useReview(cardsWithProgress: CardWithProgress[]) {
   const [progressMap, setProgressMap] = useState<ProgressMap>({});
   const [queue, setQueue] = useState<string[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // No loading state needed since data is passed in ready
+  const loading = false;
 
   const cardById = useMemo(() => {
     const m: Record<string, Card> = {};
-    for (const c of cards) m[c.id] = c;
+    for (const c of cardsWithProgress) m[c.id] = c;
     return m;
-  }, [cards]);
+  }, [cardsWithProgress]);
+
+  // Init queue and map from props
+  useEffect(() => {
+    const map: ProgressMap = {};
+    for (const c of cardsWithProgress) {
+      if (c.progress) map[c.id] = c.progress;
+    }
+    setProgressMap(map);
+
+    const q = buildQueue(cardsWithProgress, map, new Date());
+    console.log("[DEBUG] Initialized Queue with joined data:", q.length);
+
+    setQueue(q);
+    setQueueIndex(0);
+    setRevealed(false);
+  }, [cardsWithProgress]);
+
 
   const currentId = queue[queueIndex] ?? null;
   const currentCard = currentId ? cardById[currentId] : null;
   const currentProgress = currentId ? progressMap[currentId] : undefined;
 
-  // init progress + queue
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const ids = cards.map(c => c.id);
-        const prog = await fetchProgress(ids);
-        const map: ProgressMap = {};
-        for (const p of prog) map[p.card_id] = p;
 
-        setProgressMap(map);
-
-        const q = buildQueue(cards, map, new Date());
-        console.log("[DEBUG] Cards:", cards.length, "Queue:", q.length, q);
-        setQueue(q);
-        setQueueIndex(0);
-        setRevealed(false);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [cards]);
 
   const reveal = useCallback(() => setRevealed(true), []);
 

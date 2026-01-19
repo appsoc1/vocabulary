@@ -1,11 +1,13 @@
 "use client";
 
+
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { useCards } from "@/hooks/useCards";
+// import { useCards } from "@/hooks/useCards"; 
 import { useReview } from "@/hooks/useReview";
 import { maskWord } from "@/lib/srs/masking";
 import type { Card } from "@/types";
+import type { CardWithProgress } from "@/lib/db/cards";
 import { Check, X, Send, Youtube, ExternalLink, ArrowRight } from "lucide-react";
 
 export default function ReviewPage() {
@@ -19,28 +21,34 @@ export default function ReviewPage() {
 function ReviewContent() {
   const sp = useSearchParams();
   const folderStr = sp.get("folders") ?? "";
-  const folderIds = useMemo(
-    () => folderStr.split(",").map(s => s.trim()).filter(Boolean),
-    [folderStr]
-  );
 
-  const { listByFolders } = useCards();
-  const [cards, setCards] = useState<Card[]>([]);
+  // No longer needed to memoize folderIds for useCards, but useful for effect dependency
+  const folderIds = folderStr;
+
+  // const { listByFolders } = useCards();
+  const [cards, setCards] = useState<CardWithProgress[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
 
   useEffect(() => {
     (async () => {
+      if (!folderIds) return;
       setLoadingCards(true);
       try {
-        const c = await listByFolders(folderIds);
-        setCards(c);
+        const res = await fetch(`/api/review/session?folderIds=${folderIds}`);
+        const data = await res.json();
+        if (data.cards) {
+          setCards(data.cards);
+        }
+      } catch (e) {
+        console.error(e);
       } finally {
         setLoadingCards(false);
       }
     })();
-  }, [listByFolders, folderIds]);
+  }, [folderIds]); // Removed listByFolders dependency
 
   const { loading, currentCard, answerForget, answerRemember } = useReview(cards);
+
 
   const [userInput, setUserInput] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -120,27 +128,27 @@ function ReviewContent() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-2xl mx-auto space-y-4">
+    <div className="flex flex-col h-[100dvh] bg-background">
+      {/* Main content - add min-h-0 to allow scrolling */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
+        <div className="max-w-2xl mx-auto space-y-4 h-full flex flex-col">
           {/* Card display */}
-          <div className="bg-card border rounded-2xl p-8 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center">
+          <div className="bg-card border rounded-2xl p-6 text-center shadow-sm flex-1 min-h-[200px] flex flex-col items-center justify-center">
             {!revealed ? (
-              <div className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground">
+              <div className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground break-all">
                 {maskedWord}
               </div>
             ) : (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <div className={`text-5xl md:text-6xl font-bold ${checkResult === "correct" ? "text-green-600" : "text-primary"}`}>
+              <div className="space-y-4 animate-in fade-in duration-200 w-full overflow-hidden">
+                <div className={`text-4xl md:text-6xl font-bold break-words ${checkResult === "correct" ? "text-green-600" : "text-primary"}`}>
                   {currentCard.english}
                 </div>
                 <div className="w-20 h-1 bg-muted mx-auto rounded" />
-                <div className="text-2xl font-medium text-foreground">
+                <div className="text-xl md:text-2xl font-medium text-foreground break-words">
                   {currentCard.meaning_1}
                 </div>
                 {currentCard.meaning_2 && (
-                  <div className="text-lg text-muted-foreground">{currentCard.meaning_2}</div>
+                  <div className="text-base text-muted-foreground break-words">{currentCard.meaning_2}</div>
                 )}
                 {currentCard.video_url && (
                   <a href={currentCard.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-500 hover:underline">
@@ -153,38 +161,40 @@ function ReviewContent() {
             )}
           </div>
 
-          {/* Forget / Remember buttons OR Next button */}
-          {!revealed ? (
-            <div className="flex gap-3">
+          {/* Buttons area */}
+          <div className="pb-2">
+            {!revealed ? (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleForget}
+                  className="flex-1 h-12 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <X size={18} />
+                  Forget
+                </button>
+                <button
+                  onClick={handleRemember}
+                  className="flex-1 h-12 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Check size={18} />
+                  Remember
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={handleForget}
-                className="flex-1 h-12 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                onClick={checkResult === "correct" ? handleRemember : handleForget}
+                className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
               >
-                <X size={18} />
-                Forget
+                Next
+                <ArrowRight size={18} />
               </button>
-              <button
-                onClick={handleRemember}
-                className="flex-1 h-12 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-              >
-                <Check size={18} />
-                Remember
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={checkResult === "correct" ? handleRemember : handleForget}
-              className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-            >
-              Next
-              <ArrowRight size={18} />
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Fixed bottom input - ChatGPT style textarea */}
-      <div className="sticky bottom-0 left-0 right-0 bg-background border-t px-4 py-3">
+      {/* Fixed bottom input */}
+      <div className="w-full bg-background border-t px-4 py-3 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
         <div className="max-w-2xl mx-auto">
           <div className="relative flex items-end bg-muted/50 rounded-2xl border shadow-sm">
             <textarea
@@ -192,14 +202,15 @@ function ReviewContent() {
               onChange={(e) => setUserInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={revealed}
-              rows={2}
+              rows={1}
               autoFocus
-              className="flex-1 min-h-[60px] max-h-[120px] bg-transparent px-4 py-3 text-lg outline-none resize-none disabled:opacity-50"
+              className="flex-1 min-h-[50px] max-h-[120px] bg-transparent px-4 py-3 text-lg outline-none resize-none disabled:opacity-50"
+              style={{ height: 'auto' }}
             />
             <button
               onClick={handleCheck}
               disabled={!userInput.trim() || revealed}
-              className="h-10 w-10 mr-2 mb-2 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-10 w-10 mr-2 mb-1.5 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send size={18} />
             </button>
