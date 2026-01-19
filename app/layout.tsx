@@ -8,6 +8,18 @@ import { Folder, PenTool, LayoutDashboard, Type, BarChart3, FileSpreadsheet } fr
 import { AuthProvider } from "@/context/AuthContext";
 import { UserNav } from "@/components/UserNav";
 import { MobileNav } from "@/components/MobileNav";
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  // This is crucial: tells browser to resize the viewport when keyboard opens
+  // so that 'bottom: 0' elements move up above the keyboard.
+  interactiveWidget: "resizes-content",
+};
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
