@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Violet / Zinc Palette - Dark/Premium Feel */
+    --background: 260 20% 98%;
+    --foreground: 260 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 260 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 260 25% 10%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 260 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 260 10% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 260 20% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 260 25% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 260 25% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 260 25% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 263 70% 50%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 260 20% 15%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 260 20% 15%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 260 20% 15%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 260 20% 15%;
+    --input: 260 20% 15%;
+    --ring: 263 70% 50%;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/20;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
