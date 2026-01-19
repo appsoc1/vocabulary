@@ -44,7 +44,6 @@ function ReviewContent() {
 
   const { loading, currentCard, answerForget, answerRemember } = useReview(cards);
 
-  // Debug / Trace for user
   const renderCount = useRef(0);
   renderCount.current++;
 
@@ -56,7 +55,6 @@ function ReviewContent() {
     return currentCard ? maskWord(currentCard.english) : "";
   }, [currentCard?.english]);
 
-  // Reset state when card changes
   useEffect(() => {
     setUserInput("");
     setRevealed(false);
@@ -87,7 +85,6 @@ function ReviewContent() {
   };
 
   const handleRemember = async () => {
-    // Hook handles optimistic update now
     await answerRemember();
   };
 
@@ -121,17 +118,20 @@ function ReviewContent() {
     );
   }
 
-  // ROBUST LAYOUT V5: Fixed Position Input + Padding Bottom
+  // FIXED SHELL LAYOUT V6 - NO BODY SCROLL
   return (
-    <div className="min-h-[100dvh] bg-background relative">
+    <div className="fixed inset-0 w-full h-full bg-background overflow-hidden overscroll-none">
       {/* 
-        Scrollable Content Container 
-        pb-[140px] guarantees content isn't hidden behind the fixed input area
+        1. Scrollable Content Container (Internal Scroll)
+        - h-full: Fills the fixed shell
+        - overflow-y-auto: Allows content to scroll INSIDE this div
+        - pb-[140px]: Ensures bottom content isn't covered by input
+        - pt-6: Top spacing
       */}
-      <div className="w-full px-4 pt-6 pb-[140px] flex flex-col items-center">
+      <div className="w-full h-full overflow-y-auto px-4 pt-6 pb-[140px] flex flex-col items-center">
         <div className="max-w-2xl w-full space-y-6 flex flex-col items-center">
 
-          {/* Progress Indicator (Optional but helpful) */}
+          {/* Progress Indicator */}
           <div className="w-full text-xs text-muted-foreground text-center mb-2">
             Card ID: {currentCard.id.slice(0, 4)}... | Renders: {renderCount.current}
           </div>
@@ -201,10 +201,9 @@ function ReviewContent() {
       </div>
 
       {/* 
-        FIXED INPUT AREA 
-        - position: fixed, bottom: 0
-        - z-index: 50 (Higher than everything else)
-        - bg-background/95 (Blur effect)
+        2. Fixed Input Area 
+        - position: absolute/fixed bottom-0
+        - z-index: 50
       */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <div className="max-w-2xl mx-auto">
