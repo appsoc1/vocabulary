@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReview } from "@/hooks/useReview";
 import { maskWord } from "@/lib/srs/masking";
@@ -24,34 +24,6 @@ function ReviewContent() {
   const [cards, setCards] = useState<CardWithProgress[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
 
-  // VIEWPORT HEIGHT LOGIC
-  const [viewportHeight, setViewportHeight] = useState("100vh");
-
-  useEffect(() => {
-    const handleResize = () => {
-      // Use visualViewport.height if available, otherwise fallback to innerHeight
-      const height = window.visualViewport?.height || window.innerHeight;
-      setViewportHeight(`${height}px`);
-    };
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
-      window.visualViewport.addEventListener("scroll", handleResize);
-      handleResize();
-    } else {
-      window.addEventListener("resize", handleResize);
-    }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
-        window.visualViewport.removeEventListener("scroll", handleResize);
-      } else {
-        window.removeEventListener("resize", handleResize);
-      }
-    };
-  }, []);
-
   useEffect(() => {
     (async () => {
       if (!folderIds) return;
@@ -72,6 +44,10 @@ function ReviewContent() {
 
   const { loading, currentCard, answerForget, answerRemember } = useReview(cards);
 
+  // Debug / Trace for user
+  const renderCount = useRef(0);
+  renderCount.current++;
+
   const [userInput, setUserInput] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [checkResult, setCheckResult] = useState<"correct" | "wrong" | null>(null);
@@ -80,6 +56,7 @@ function ReviewContent() {
     return currentCard ? maskWord(currentCard.english) : "";
   }, [currentCard?.english]);
 
+  // Reset state when card changes
   useEffect(() => {
     setUserInput("");
     setRevealed(false);
@@ -105,21 +82,13 @@ function ReviewContent() {
       setRevealed(true);
       setCheckResult("wrong");
     } else {
-      try {
-        await answerForget();
-      } catch (e) {
-        console.error("Forget failed", e);
-      }
+      await answerForget();
     }
   };
 
   const handleRemember = async () => {
-    try {
-      console.log("Remembering...");
-      await answerRemember();
-    } catch (e) {
-      console.error("Remember failed", e);
-    }
+    // Hook handles optimistic update now
+    await answerRemember();
   };
 
   if (loadingCards || loading) {
@@ -152,24 +121,23 @@ function ReviewContent() {
     );
   }
 
-  // FIXED LAYOUT V4: Visual Viewport + Fixed Top + Z-index Input
+  // ROBUST LAYOUT V5: Fixed Position Input + Padding Bottom
   return (
-    <div
-      className="bg-background flex flex-col overflow-hidden fixed inset-0"
-      style={{ height: viewportHeight }}
-    >
+    <div className="min-h-[100dvh] bg-background relative">
       {/* 
-        Main content:
-        - flex-1: Takes available space
-        - overflow-y-auto: Scrolls if content is too long
-        - justify-start: ALIGNS TO TOP (Prevents jumping)
-        - pt-4: Fixed padding from top
+        Scrollable Content Container 
+        pb-[140px] guarantees content isn't hidden behind the fixed input area
       */}
-      <div className="flex-1 w-full px-4 pt-4 overflow-y-auto flex flex-col justify-start">
-        <div className="max-w-2xl w-full mx-auto space-y-6 flex flex-col items-center pb-4">
+      <div className="w-full px-4 pt-6 pb-[140px] flex flex-col items-center">
+        <div className="max-w-2xl w-full space-y-6 flex flex-col items-center">
+
+          {/* Progress Indicator (Optional but helpful) */}
+          <div className="w-full text-xs text-muted-foreground text-center mb-2">
+            Card ID: {currentCard.id.slice(0, 4)}... | Renders: {renderCount.current}
+          </div>
 
           {/* Card display */}
-          <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center relative z-10 shrink-0">
+          <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center relative z-10">
             {!revealed ? (
               <div className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground break-all leading-tight">
                 {maskedWord}
@@ -198,7 +166,7 @@ function ReviewContent() {
           </div>
 
           {/* Buttons Area */}
-          <div className="w-full max-w-2xl z-10 shrink-0">
+          <div className="w-full max-w-2xl z-10">
             {!revealed ? (
               <div className="flex gap-3">
                 <button
@@ -232,8 +200,13 @@ function ReviewContent() {
         </div>
       </div>
 
-      {/* Input Area: Flex Item at bottom of the explicit viewport height */}
-      <div className="w-full bg-background/95 backdrop-blur border-t px-4 py-3 shrink-0 z-50">
+      {/* 
+        FIXED INPUT AREA 
+        - position: fixed, bottom: 0
+        - z-index: 50 (Higher than everything else)
+        - bg-background/95 (Blur effect)
+      */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <div className="max-w-2xl mx-auto">
           <div className="relative flex items-end bg-muted/50 rounded-2xl border shadow-sm">
             <textarea

@@ -70,29 +70,44 @@ export function useReview(cardsWithProgress: CardWithProgress[]) {
 
   const answerRemember = useCallback(async () => {
     if (!currentId) return;
-    const now = new Date();
 
-    const patch = applyRemember({ card_id: currentId, ...(currentProgress ?? {}) }, now);
-    const saved = await saveProgress(patch);
-
-    setProgressMap(prev => ({ ...prev, [currentId]: saved }));
+    // OPTIMISTIC UPDATE: Advance immediately
     setRevealed(false);
     setQueueIndex(prev => prev + 1);
+
+    const now = new Date();
+    // Calculate new state
+    const patch = applyRemember({ card_id: currentId, ...(currentProgress ?? {}) }, now);
+
+    // Update local map immediately
+    setProgressMap(prev => ({ ...prev, [currentId]: { ...prev[currentId], ...patch } as Progress }));
+
+    // Save in background (catch error silently or log)
+    saveProgress(patch).catch(err => {
+      console.error("Background save failed for", currentId, err);
+      // Ideally we'd rollback or queue a retry, but for now we prioritize UX speed.
+    });
   }, [currentId, currentProgress]);
 
   const answerForget = useCallback(async () => {
     if (!currentId) return;
-    const now = new Date();
 
-    const patch = applyForget({ card_id: currentId, ...(currentProgress ?? {}) }, now);
-    const saved = await saveProgress(patch);
-
-    setProgressMap(prev => ({ ...prev, [currentId]: saved }));
+    // OPTIMISTIC UPDATE:
     setRevealed(false);
-
-    // Add current card back to end of queue for repeat
+    // Move to end of queue immediately
     setQueue(prev => [...prev, currentId]);
     setQueueIndex(prev => prev + 1);
+
+    const now = new Date();
+    const patch = applyForget({ card_id: currentId, ...(currentProgress ?? {}) }, now);
+
+    // Update local map
+    setProgressMap(prev => ({ ...prev, [currentId]: { ...prev[currentId], ...patch } as Progress }));
+
+    // Save in background
+    saveProgress(patch).catch(err => {
+      console.error("Background save failed for", currentId, err);
+    });
   }, [currentId, currentProgress]);
 
   const stats = useMemo(() => {
