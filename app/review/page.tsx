@@ -88,13 +88,8 @@ function ReviewContent() {
   };
 
   const handleRemember = async () => {
-    if (!revealed) {
-      // User clicked Remember without typing - show answer first then mark as remembered
-      setRevealed(true);
-      setCheckResult("correct");
-    } else {
-      await answerRemember();
-    }
+    // FIX 2: Auto-advance (Skip "Next")
+    await answerRemember();
   };
 
   if (loadingCards || loading) {
@@ -127,19 +122,17 @@ function ReviewContent() {
     );
   }
 
-  // FIXED FOOTER STRATEGY:
-  // 1. Outer container uses min-h-dvh to fill screen but allow growth.
-  // 2. Content has large bottom padding to clear the fixed footer.
-  // 3. Footer is fixed bottom-0 to stay stuck to the keyboard/viewport bottom.
-
+  // FIX 1: Flex Column Layout for Mobile Keyboard Stability
+  // h-[100dvh] + overflow-hidden locks variable viewport height.
+  // Input area is a flex item (shrink-0), so it pushes up naturally.
   return (
-    <div className="min-h-[100dvh] bg-background relative flex flex-col">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       {/* Main content - Scrollable area */}
-      <div className="flex-1 w-full px-4 pb-48 pt-6">
-        <div className="max-w-2xl mx-auto space-y-6 flex flex-col items-center">
+      <div className="flex-1 w-full px-4 pt-4 overflow-y-auto">
+        <div className="max-w-2xl mx-auto space-y-6 flex flex-col items-center pb-4">
 
           {/* Card display */}
-          <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center relative z-10">
+          <div className="w-full bg-card border rounded-2xl p-6 text-center shadow-sm min-h-[250px] flex flex-col items-center justify-center relative z-10 shrink-0">
             {!revealed ? (
               <div className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-wide text-foreground break-all leading-tight">
                 {maskedWord}
@@ -167,10 +160,8 @@ function ReviewContent() {
             )}
           </div>
 
-          {/* Buttons Area - Placed directly in flow. 
-              On huge screens it sits below card. On mobile it scrolls with card.
-          */}
-          <div className="w-full max-w-2xl z-10">
+          {/* Buttons Area */}
+          <div className="w-full max-w-2xl z-10 shrink-0">
             {!revealed ? (
               <div className="flex gap-3">
                 <button
@@ -201,8 +192,8 @@ function ReviewContent() {
         </div>
       </div>
 
-      {/* Fixed bottom input - Properly fixed to viewport bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-3 z-50 pb-[max(12px,env(safe-area-inset-bottom))]">
+      {/* Input Area - Flex Item (Not Fixed) */}
+      <div className="w-full bg-background/95 backdrop-blur border-t px-4 py-3 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
         <div className="max-w-2xl mx-auto">
           <div className="relative flex items-end bg-muted/50 rounded-2xl border shadow-sm">
             <textarea
