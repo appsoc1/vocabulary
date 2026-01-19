@@ -25,11 +25,9 @@ function ReviewContent() {
   const [loadingCards, setLoadingCards] = useState(false);
 
   // VIEWPORT HEIGHT LOGIC
-  // Initialize with 100vh as fallback
   const [viewportHeight, setViewportHeight] = useState("100vh");
 
   useEffect(() => {
-    // Handler to detect visual viewport changes (keyboard open/close)
     const handleResize = () => {
       // Use visualViewport.height if available, otherwise fallback to innerHeight
       const height = window.visualViewport?.height || window.innerHeight;
@@ -39,7 +37,6 @@ function ReviewContent() {
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", handleResize);
       window.visualViewport.addEventListener("scroll", handleResize);
-      // Set initial
       handleResize();
     } else {
       window.addEventListener("resize", handleResize);
@@ -108,12 +105,21 @@ function ReviewContent() {
       setRevealed(true);
       setCheckResult("wrong");
     } else {
-      await answerForget();
+      try {
+        await answerForget();
+      } catch (e) {
+        console.error("Forget failed", e);
+      }
     }
   };
 
   const handleRemember = async () => {
-    await answerRemember();
+    try {
+      console.log("Remembering...");
+      await answerRemember();
+    } catch (e) {
+      console.error("Remember failed", e);
+    }
   };
 
   if (loadingCards || loading) {
@@ -146,7 +152,7 @@ function ReviewContent() {
     );
   }
 
-  // FIXED LAYOUT V3: Visual Viewport + Top Alignment
+  // FIXED LAYOUT V4: Visual Viewport + Fixed Top + Z-index Input
   return (
     <div
       className="bg-background flex flex-col overflow-hidden fixed inset-0"
@@ -198,6 +204,7 @@ function ReviewContent() {
                 <button
                   onClick={handleForget}
                   className="flex-1 h-12 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                  type="button"
                 >
                   <X size={18} />
                   Forget
@@ -205,6 +212,7 @@ function ReviewContent() {
                 <button
                   onClick={handleRemember}
                   className="flex-1 h-12 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                  type="button"
                 >
                   <Check size={18} />
                   Remember
@@ -214,6 +222,7 @@ function ReviewContent() {
               <button
                 onClick={checkResult === "correct" ? handleRemember : handleForget}
                 className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                type="button"
               >
                 Next
                 <ArrowRight size={18} />
